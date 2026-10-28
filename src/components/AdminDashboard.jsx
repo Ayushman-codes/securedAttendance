@@ -17,6 +17,8 @@ export default function AdminDashboard({ user, onTriggerRefresh, triggerRefresh 
 
   // Add User Form State
   const [newUser, setNewUser] = useState({ id: "", name: "", email: "", role: "student", password: "" });
+  const [teacherType, setTeacherType] = useState("");
+  const [course, setCourse] = useState("");
   const [addUserMessage, setAddUserMessage] = useState(null);
   const [isAddingUser, setIsAddingUser] = useState(false);
 
@@ -54,12 +56,18 @@ export default function AdminDashboard({ user, onTriggerRefresh, triggerRefresh 
     setAddUserMessage(null);
     setIsAddingUser(true);
 
-    const res = await addUser(newUser);
+    const res = await addUser({
+      ...newUser,
+      ...(newUser.role === "teacher" ? { teacherType } : {}),
+      ...(newUser.role === "student" ? { course } : {})
+    });
     setAddUserMessage(res);
     setIsAddingUser(false);
 
     if (res.success) {
       setNewUser({ id: "", name: "", email: "", role: "student", password: "" });
+      setTeacherType("");
+      setCourse("");
       onTriggerRefresh();
     }
   };
@@ -240,13 +248,54 @@ export default function AdminDashboard({ user, onTriggerRefresh, triggerRefresh 
                     </label>
                     <select
                       value={newUser.role}
-                      onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}
+                      onChange={(e) => {
+                        const role = e.target.value;
+                        setNewUser({ ...newUser, role });
+                        if (role !== "teacher") setTeacherType("");
+                        if (role !== "student") setCourse("");
+                      }}
                       className="w-full bg-slate-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg px-3 py-2 text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:border-emerald-500 cursor-pointer"
                     >
                       <option value="student">Student</option>
                       <option value="teacher">Teacher</option>
                     </select>
                   </div>
+                  {newUser.role === "teacher" && (
+                    <div className="space-y-1.5">
+                      <label className="block text-[10px] font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
+                        Teacher Type *
+                      </label>
+                      <select
+                        value={teacherType}
+                        onChange={(e) => setTeacherType(e.target.value)}
+                        className="w-full bg-slate-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg px-3 py-2 text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:border-emerald-500 cursor-pointer"
+                      >
+                        <option value="">Select teacher type</option>
+                        <option value="Professor">Professor</option>
+                        <option value="Associate Professor">Associate Professor</option>
+                        <option value="Assistant Professor">Assistant Professor</option>
+                        <option value="Lecturer">Lecturer</option>
+                        <option value="HOD">Head of Department (HOD)</option>
+                        <option value="Visiting Faculty">Visiting Faculty</option>
+                      </select>
+                    </div>
+                  )}
+                  {newUser.role === "student" && (
+                    <div className="space-y-1.5">
+                      <label className="block text-[10px] font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
+                        Course *
+                      </label>
+                      <select
+                        value={course}
+                        onChange={(e) => setCourse(e.target.value)}
+                        className="w-full bg-slate-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg px-3 py-2 text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:border-emerald-500 cursor-pointer"
+                      >
+                        <option value="">Select course</option>
+                        <option value="BCA">BCA - Bachelor of Computer Applications</option>
+                        <option value="BBA">BBA - Bachelor of Business Administration</option>
+                      </select>
+                    </div>
+                  )}
                   <div className="space-y-1.5">
                     <label className="block text-[10px] font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
                       Password *

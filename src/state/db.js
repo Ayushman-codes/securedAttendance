@@ -281,9 +281,17 @@ export async function unbindStudentDevice(studentId) {
 // USER MANAGEMENT
 // ------------------------------------------------------------------
 
-export async function addUser({ id, name, email, role, password }) {
+export async function addUser({ id, name, email, role, password, ...extra }) {
   if (!id || !name || !email || !role || !password) {
     return { success: false, message: "All fields are required." };
+  }
+
+  if (role === "teacher" && !extra.teacherType) {
+    return { success: false, message: "Teacher type is required." };
+  }
+
+  if (role === "student" && !extra.course) {
+    return { success: false, message: "Course is required." };
   }
 
   const { data: existing } = await supabase.from('users').select('id').eq('id', id).single();
@@ -297,7 +305,8 @@ export async function addUser({ id, name, email, role, password }) {
     email,
     role,
     password,
-    registeredFingerprint: null
+    registeredFingerprint: null,
+    ...extra
   };
 
   const { error } = await supabase.from('users').insert([newUser]);
