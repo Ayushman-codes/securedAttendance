@@ -151,35 +151,6 @@ export default function Login({ onLogin, triggerRefresh, onForgotPassword }) {
           </button>
         </form>
 
-        {/* Quick Demo Credentials */}
-        <div className="pt-4 border-t border-slate-200 dark:border-white/10 text-center space-y-2">
-          <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-            Quick Demo Sign In
-          </p>
-          <div className="flex flex-wrap gap-2 justify-center">
-            <button
-              type="button"
-              onClick={() => { setEmail("alan.turing@college.edu"); setPassword("teacher123"); }}
-              className="text-xs px-2.5 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/50 hover:bg-emerald-100 transition cursor-pointer font-medium"
-            >
-              Teacher (Dr. Turing)
-            </button>
-            <button
-              type="button"
-              onClick={() => { setEmail("alice.smith@college.edu"); setPassword("student123"); }}
-              className="text-xs px-2.5 py-1.5 rounded-lg bg-sky-50 text-sky-700 dark:bg-sky-950/40 dark:text-sky-300 border border-sky-200 dark:border-sky-800/50 hover:bg-sky-100 transition cursor-pointer font-medium"
-            >
-              Student (Alice Smith)
-            </button>
-            <button
-              type="button"
-              onClick={() => { setEmail("admin@college.edu"); setPassword("admin123"); }}
-              className="text-xs px-2.5 py-1.5 rounded-lg bg-purple-50 text-purple-700 dark:bg-purple-950/40 dark:text-purple-300 border border-purple-200 dark:border-purple-800/50 hover:bg-purple-100 transition cursor-pointer font-medium"
-            >
-              Admin
-            </button>
-          </div>
-        </div>
       </div>
     </div>
   );
