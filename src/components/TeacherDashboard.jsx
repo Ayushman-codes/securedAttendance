@@ -143,6 +143,15 @@ export default function TeacherDashboard({ user, onTriggerRefresh, triggerRefres
     }
   }, []);
 
+  // All subjects are accessible to all instructors for attendance broadcasting
+  const subjects = data.subjects;
+  const activeSession = data.sessions.find(s => (s.teacherId === user.id || s.createdBy === user.id)) || null;
+  const sessionEnrolledStudents = data.users.filter(u => u.role === "student");
+  const attendanceRecords = activeSession
+    ? data.attendance.filter(a => a.sessionId === activeSession.id)
+    : [];
+  const effectiveSelectedSubjectId = selectedSubjectId || subjects[0]?.id || "";
+
   // Initial load + manual refresh (triggered by start/end session, override, etc.)
   useEffect(() => {
     refreshData(false);
@@ -162,15 +171,6 @@ export default function TeacherDashboard({ user, onTriggerRefresh, triggerRefres
       clearInterval(interval);
     };
   }, [activeSession?.id, refreshData]);
-
-  // All subjects are accessible to all instructors for attendance broadcasting
-  const subjects = data.subjects;
-  const activeSession = data.sessions.find(s => (s.teacherId === user.id || s.createdBy === user.id)) || null;
-  const sessionEnrolledStudents = data.users.filter(u => u.role === "student");
-  const attendanceRecords = activeSession
-    ? data.attendance.filter(a => a.sessionId === activeSession.id)
-    : [];
-  const effectiveSelectedSubjectId = selectedSubjectId || subjects[0]?.id || "";
 
   // Mock analytics data
   const chartData = [
