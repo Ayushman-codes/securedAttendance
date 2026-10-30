@@ -309,10 +309,33 @@ export async function addUser({ id, name, email, role, password, ...extra }) {
     ...extra
   };
 
-  const { error } = await supabase.from('users').insert([newUser]);
+  let { error } = await supabase.from('users').insert([newUser]);
+
+  // Fallback if the Supabase table doesn't have 'course' or 'teacherType' columns in its schema cache
+  if (error && (error.message?.includes('column') || error.code === 'PGRST204')) {
+    const baseUser = {
+      id,
+      name,
+      email,
+      role,
+      password,
+      registeredFingerprint: null
+    };
+    const fallbackResult = await supabase.from('users').insert([baseUser]);
+    error = fallbackResult.error;
+  }
+
   if (error) return { success: false, message: "Failed to add user: " + error.message };
 
-  await writeAuditLog("INFO", `User Added: ${name}`, `Role: ${role}. ID: ${id}. Email: ${email}`);
+  const details = [
+    `Role: ${role}`,
+    `ID: ${id}`,
+    `Email: ${email}`,
+    extra.course ? `Course: ${extra.course}` : null,
+    extra.teacherType ? `Type: ${extra.teacherType}` : null
+  ].filter(Boolean).join(". ");
+
+  await writeAuditLog("INFO", `User Added: ${name}`, details);
   return { success: true, message: `${role} "${name}" added successfully.` };
 }
 

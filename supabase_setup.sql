@@ -9,9 +9,15 @@ CREATE TABLE IF NOT EXISTS public.users (
   email TEXT UNIQUE NOT NULL,
   role TEXT NOT NULL,
   password TEXT NOT NULL,
+  course TEXT,
+  "teacherType" TEXT,
   "registeredFingerprint" TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Schema migration for existing databases:
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS course TEXT;
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS "teacherType" TEXT;
 
 -- 2. Create SUBJECTS table
 CREATE TABLE IF NOT EXISTS public.subjects (
