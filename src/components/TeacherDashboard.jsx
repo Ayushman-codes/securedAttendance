@@ -8,8 +8,111 @@ import {
   submitManualOverride
 } from "../state/db";
 import { QRCodeSVG } from "qrcode.react";
-import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, PieChart, Pie, Cell } from "recharts";
 import { Play, Users, Eye, Loader2, RotateCw } from "lucide-react";
+
+function WeeklyTrendsChart({ data }) {
+  const minRate = 70;
+  const maxRate = 100;
+  const width = 320;
+  const height = 110;
+  const padLeft = 30;
+  const padRight = 20;
+  const padTop = 15;
+  const padBottom = 25;
+  const plotWidth = width - padLeft - padRight;
+  const plotHeight = height - padTop - padBottom;
+
+  const points = data.map((d, i) => {
+    const x = padLeft + (i / (data.length - 1)) * plotWidth;
+    const y = padTop + (1 - (d.rate - minRate) / (maxRate - minRate)) * plotHeight;
+    return { x, y, name: d.name, rate: d.rate };
+  });
+
+  const pathD = points.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(" ");
+  const areaD = `${pathD} L ${points[points.length - 1].x.toFixed(1)} ${(padTop + plotHeight).toFixed(1)} L ${points[0].x.toFixed(1)} ${(padTop + plotHeight).toFixed(1)} Z`;
+
+  return (
+    <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full select-none" preserveAspectRatio="none">
+      <defs>
+        <linearGradient id="attendanceAreaGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#0e5b9e" stopOpacity="0.35" />
+          <stop offset="100%" stopColor="#0e5b9e" stopOpacity="0.02" />
+        </linearGradient>
+      </defs>
+
+      {[minRate, 85, maxRate].map((val) => {
+        const y = padTop + (1 - (val - minRate) / (maxRate - minRate)) * plotHeight;
+        return (
+          <g key={val}>
+            <line x1={padLeft} y1={y} x2={width - padRight} y2={y} stroke="currentColor" className="text-zinc-200 dark:text-zinc-800" strokeDasharray="3 3" strokeWidth="1" />
+            <text x={padLeft - 6} y={y + 3} textAnchor="end" fontSize="9" className="fill-zinc-400 font-mono">{val}%</text>
+          </g>
+        );
+      })}
+
+      <path d={areaD} fill="url(#attendanceAreaGrad)" />
+      <path d={pathD} fill="none" stroke="#0e5b9e" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+
+      {points.map((p, i) => (
+        <g key={i}>
+          <circle cx={p.x} cy={p.y} r="3.5" fill="#0e5b9e" stroke="#ffffff" strokeWidth="1.5" />
+          <text x={p.x} y={p.y - 7} textAnchor="middle" fontSize="9" fontWeight="bold" fill="#0e5b9e">{p.rate}%</text>
+          <text x={p.x} y={height - 6} textAnchor="middle" fontSize="10" className="fill-zinc-500 font-semibold">{p.name}</text>
+        </g>
+      ))}
+    </svg>
+  );
+}
+
+function RatioDonutChart({ data }) {
+  const total = data.reduce((acc, d) => acc + d.value, 0) || 1;
+  const radius = 32;
+  const circumference = 2 * Math.PI * radius;
+  const colors = { Present: "#10b981", Late: "#f59e0b", Absent: "#f43f5e" };
+
+  let currentOffset = 0;
+  const segments = data.map((d) => {
+    const strokeDash = (d.value / total) * circumference;
+    const offset = currentOffset;
+    currentOffset += strokeDash;
+    return {
+      name: d.name,
+      value: d.value,
+      stroke: colors[d.name] || "#10b981",
+      strokeDasharray: `${strokeDash} ${circumference}`,
+      strokeDashoffset: -offset,
+    };
+  });
+
+  const presentItem = data.find((d) => d.name === "Present");
+  const presentPercent = Math.round(((presentItem ? presentItem.value : 0) / total) * 100);
+
+  return (
+    <div className="relative flex items-center justify-center">
+      <svg width="95" height="95" viewBox="0 0 100 100" className="rotate-[-90deg]">
+        <circle cx="50" cy="50" r={radius} fill="none" stroke="currentColor" className="text-zinc-100 dark:text-zinc-800" strokeWidth="11" />
+        {segments.map((s, i) => (
+          <circle
+            key={i}
+            cx="50"
+            cy="50"
+            r={radius}
+            fill="none"
+            stroke={s.stroke}
+            strokeWidth="11"
+            strokeDasharray={s.strokeDasharray}
+            strokeDashoffset={s.strokeDashoffset}
+            strokeLinecap="round"
+          />
+        ))}
+      </svg>
+      <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+        <span className="text-xs font-bold text-slate-800 dark:text-slate-100">{presentPercent}%</span>
+        <span className="text-[8px] font-semibold text-emerald-600 dark:text-emerald-400">Present</span>
+      </div>
+    </div>
+  );
+}
 
 export default function TeacherDashboard({ user, onTriggerRefresh, triggerRefresh }) {
   const [data, setData] = useState({ users: [], sessions: [], subjects: [], attendance: [] });
@@ -386,41 +489,22 @@ export default function TeacherDashboard({ user, onTriggerRefresh, triggerRefres
           {isAnalyticsLoaded && (
             <div className="mt-4 pt-4 border-t border-zinc-150 dark:border-zinc-800 space-y-4 animate-fade-in">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {/* Recharts Area Chart */}
+                {/* SVG Area Chart */}
                 <div className="md:col-span-2 h-44">
-                  <span className="text-[10px] text-zinc-450 uppercase font-semibold">Weekly Attendance Trends</span>
-                  <ResponsiveContainer width="100%" height="90%">
-                    <AreaChart data={chartData} margin={{ top: 10, right: 5, left: -25, bottom: 0 }}>
-                      <defs>
-                        <linearGradient id="colorRate" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#0e5b9e" stopOpacity={0.4} />
-                          <stop offset="95%" stopColor="#0e5b9e" stopOpacity={0} />
-                        </linearGradient>
-                      </defs>
-                      <XAxis dataKey="name" stroke="#888" fontSize={10} tickLine={false} />
-                      <YAxis stroke="#888" fontSize={10} tickLine={false} domain={[50, 100]} />
-                      <Tooltip contentStyle={{ background: '#0e5b9e', color: 'white', border: 'none', borderRadius: '8px', fontSize: 10 }} />
-                      <Area type="monotone" dataKey="rate" stroke="#0e5b9e" strokeWidth={2} fillOpacity={1} fill="url(#colorRate)" />
-                    </AreaChart>
-                  </ResponsiveContainer>
+                  <span className="text-[10px] text-zinc-450 uppercase font-semibold block mb-1">Weekly Attendance Trends</span>
+                  <div className="w-full h-36 bg-slate-50 dark:bg-zinc-950/60 rounded-xl p-2 border border-zinc-200 dark:border-zinc-800">
+                    <WeeklyTrendsChart data={chartData} />
+                  </div>
                 </div>
 
-                {/* Recharts Pie Chart */}
+                {/* SVG Donut Chart */}
                 <div className="h-44 flex flex-col justify-center items-center">
                   <span className="text-[10px] text-zinc-450 uppercase font-semibold block mb-2">Today's Ratio</span>
-                  <ResponsiveContainer width="100%" height="70%">
-                    <PieChart>
-                      <Pie data={pieData} innerRadius={22} outerRadius={36} paddingAngle={3} dataKey="value">
-                        {pieData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                        ))}
-                      </Pie>
-                    </PieChart>
-                  </ResponsiveContainer>
-                  <div className="flex gap-2 text-[8px] font-semibold text-zinc-400">
-                    <span className="flex items-center gap-0.5"><span className="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>Pres</span>
-                    <span className="flex items-center gap-0.5"><span className="h-1.5 w-1.5 rounded-full bg-yellow-400"></span>Late</span>
-                    <span className="flex items-center gap-0.5"><span className="h-1.5 w-1.5 rounded-full bg-rose-500"></span>Abs</span>
+                  <RatioDonutChart data={pieData} />
+                  <div className="flex gap-2 text-[8px] font-semibold text-zinc-400 mt-2">
+                    <span className="flex items-center gap-0.5"><span className="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>Pres ({pieData[0].value})</span>
+                    <span className="flex items-center gap-0.5"><span className="h-1.5 w-1.5 rounded-full bg-yellow-400"></span>Late ({pieData[1].value})</span>
+                    <span className="flex items-center gap-0.5"><span className="h-1.5 w-1.5 rounded-full bg-rose-500"></span>Abs ({pieData[2].value})</span>
                   </div>
                 </div>
               </div>
