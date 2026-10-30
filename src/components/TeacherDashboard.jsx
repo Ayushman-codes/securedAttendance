@@ -9,7 +9,7 @@ import {
 } from "../state/db";
 import { QRCodeSVG } from "qrcode.react";
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, PieChart, Pie, Cell } from "recharts";
-import { Play, Users, Eye, Loader2 } from "lucide-react";
+import { Play, Users, Eye, Loader2, RotateCw } from "lucide-react";
 
 export default function TeacherDashboard({ user, onTriggerRefresh, triggerRefresh }) {
   const [data, setData] = useState({ users: [], sessions: [], subjects: [], attendance: [] });
@@ -445,6 +445,13 @@ export default function TeacherDashboard({ user, onTriggerRefresh, triggerRefres
               className="juno-btn-primary shrink-0"
             >
               {isRosterLoaded ? "Close" : "Load"}
+            </button>
+            <button
+              onClick={() => refreshData(false)}
+              className="p-2 shrink-0 text-xs text-zinc-600 dark:text-zinc-400 hover:text-emerald-600 dark:hover:text-emerald-400 border border-zinc-200 dark:border-zinc-800 rounded-lg hover:bg-slate-50 dark:hover:bg-zinc-950 transition"
+              title="Reload roster"
+            >
+              <RotateCw className="h-3.5 w-3.5" />
             </button>
           </div>
 
