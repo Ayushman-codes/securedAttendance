@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import {
   fetchUsers, fetchSessions, fetchSubjects, fetchAttendance, getSimulationState,
   startTeacherSession,
@@ -28,17 +28,37 @@ export default function TeacherDashboard({ user, onTriggerRefresh, triggerRefres
   const [isAnalyticsLoaded, setIsAnalyticsLoaded] = useState(false);
   const [isRosterLoaded, setIsRosterLoaded] = useState(true);
 
-  useEffect(() => {
-    async function loadAllData() {
-      setIsLoading(true);
+  const refreshData = useCallback(async (silent = false) => {
+    if (!silent) setIsLoading(true);
+    try {
       const [u, se, su, a] = await Promise.all([
         fetchUsers(), fetchSessions(), fetchSubjects(), fetchAttendance()
       ]);
       setData({ users: u, sessions: se, subjects: su, attendance: a });
-      setIsLoading(false);
+    } finally {
+      if (!silent) setIsLoading(false);
     }
-    loadAllData();
-  }, [triggerRefresh]);
+  }, []);
+
+  // Initial load + manual refresh (triggered by start/end session, override, etc.)
+  useEffect(() => {
+    refreshData(false);
+  }, [triggerRefresh, refreshData]);
+
+  // Auto-reload the attendance panel while a live session is running so newly
+  // marked attendance shows up without a full page refresh. Polls silently
+  // (no loading overlay) every 5 seconds and stops when the session ends.
+  useEffect(() => {
+    if (!activeSession) return;
+    let isMounted = true;
+    const interval = setInterval(() => {
+      if (isMounted) refreshData(true);
+    }, 5000);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, [activeSession?.id, refreshData]);
 
   // All subjects are accessible to all instructors for attendance broadcasting
   const subjects = data.subjects;
@@ -431,7 +451,18 @@ export default function TeacherDashboard({ user, onTriggerRefresh, triggerRefres
           {isRosterLoaded && (
             <div className="mt-4 pt-4 border-t border-zinc-150 dark:border-zinc-800 space-y-4 animate-fade-in">
               <div className="flex justify-between items-center text-xs">
-                <span className="text-zinc-500">Active Course: <span className="font-bold text-slate-800 dark:text-slate-200">{activeSession ? activeSession.subjectId : "None"}</span></span>
+                <div className="flex items-center gap-2">
+                  <span className="text-zinc-500">Active Course:</span> <span className="font-bold text-slate-800 dark:text-slate-200">{activeSession ? activeSession.subjectId : "None"}</span>
+                  {activeSession && (
+                    <span className="flex items-center gap-1 px-2 py-0.5 bg-emerald-50 border border-emerald-200 dark:bg-emerald-950/20 dark:border-emerald-900/30 rounded font-medium text-emerald-700 dark:text-emerald-400 text-[9px]">
+                      <span className="relative flex h-1.5 w-1.5">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
+                      </span>
+                      Live reload
+                    </span>
+                  )}
+                </div>
                 {activeSession && (
                   <span className="px-2 py-0.5 bg-slate-50 border border-zinc-200 dark:bg-zinc-950 dark:border-zinc-800 rounded font-medium">
                     Present: <span className="text-emerald-600 dark:text-emerald-400 font-bold">{presentCount}</span> / Enrolled: <span className="text-slate-800 dark:text-slate-200">{totalStudents}</span>
